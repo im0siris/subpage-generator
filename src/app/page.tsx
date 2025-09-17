@@ -1,103 +1,697 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import axios from 'axios';
+import { MagnifyingGlassIcon, BuildingOfficeIcon, MapPinIcon } from '@heroicons/react/24/outline';
+
+interface City {
+  name: string;
+  postcode?: string;
+  country?: string;
+}
+
+interface ZippopotamPlace {
+  'place name': string;
+  'post code': string;
+}
+
+interface ZippopotamResponse {
+  'post code': string;
+  places: Array<{
+    'place name': string;
+  }>;
+}
+
+interface JobStatus {
+  job_id: string;
+  status: string;
+  message: string;
+}
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const router = useRouter();
+  const [domain, setDomain] = useState('');
+  const [branche, setBranche] = useState('');
+  const [description, setDescription] = useState('');
+  const [showCityInput, setShowCityInput] = useState(false);
+  const [cityQuery, setCityQuery] = useState('');
+  const [cities, setCities] = useState<City[]>([]);
+  const [selectedCities, setSelectedCities] = useState<City[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
+  const [showJobStatus, setShowJobStatus] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const handleDomainSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmedDomain = domain.trim();
+    if (trimmedDomain) {
+      setDomain(trimmedDomain);
+      setShowCityInput(true);
+      console.log('Domain submitted:', trimmedDomain);
+    }
+  };
+
+  const searchCities = async (query: string) => {
+    if (query.length < 2) {
+      setCities([]);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Search by city name first
+      const response = await axios.get(
+        `https://api.zippopotam.us/search/DE/${query}`
+      );
+
+      if (response.data && response.data.places) {
+        const cityResults = response.data.places.map((place: ZippopotamPlace) => ({
+          name: place['place name'],
+          postcode: place['post code'],
+          country: 'Germany'
+        }));
+
+        // Group by city name and show multiple postal codes for the same city
+        const cityGroups = cityResults.reduce((acc: City[], city: City) => {
+          const existingCity = acc.find((c: City) => c.name.toLowerCase() === city.name.toLowerCase());
+          if (existingCity) {
+            // If city exists but with different postal code, create a separate entry
+            if (existingCity.postcode !== city.postcode) {
+              acc.push(city);
+            }
+          } else {
+            acc.push(city);
+          }
+          return acc;
+        }, [] as City[]);
+
+        setCities(cityGroups.slice(0, 8)); // Show more results to include different postal codes
+      } else {
+        // If no results found, try searching for postal codes that might match
+        try {
+          const postalResponse = await axios.get(
+            `https://api.zippopotam.us/DE/${query}`
+          );
+          if (postalResponse.data && postalResponse.data.places) {
+            const postalData = postalResponse.data as ZippopotamResponse;
+            const postalResults = postalData.places.map((place) => ({
+              name: place['place name'],
+              postcode: postalData['post code'],
+              country: 'Germany'
+            }));
+            setCities(postalResults.slice(0, 5));
+          } else {
+            setCities([
+              { name: query, postcode: '00000', country: 'Germany' }
+            ]);
+          }
+        } catch {
+          setCities([
+            { name: query, postcode: '00000', country: 'Germany' }
+          ]);
+        }
+      }
+    } catch {
+      // If city search fails, try as postal code
+      try {
+        const postalResponse = await axios.get(
+          `https://api.zippopotam.us/DE/${query}`
+        );
+        if (postalResponse.data && postalResponse.data.places) {
+          const postalData = postalResponse.data as ZippopotamResponse;
+          const postalResults = postalData.places.map((place) => ({
+            name: place['place name'],
+            postcode: postalData['post code'],
+            country: 'Germany'
+          }));
+          setCities(postalResults.slice(0, 5));
+        } else {
+          setCities([
+            { name: query, postcode: '00000', country: 'Germany' }
+          ]);
+        }
+      } catch {
+        setCities([
+          { name: query, postcode: '00000', country: 'Germany' }
+        ]);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCityInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setCityQuery(value);
+
+    // Clear existing timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+
+    // Set new timeout for debounced search
+    const newTimeout = setTimeout(() => {
+      searchCities(value);
+    }, 300); // 300ms debounce
+
+    setSearchTimeout(newTimeout);
+  };
+
+  const handleCitySelect = (city: City) => {
+    if (!selectedCities.find(c => c.name === city.name && c.postcode === city.postcode)) {
+      setSelectedCities([...selectedCities, city]);
+    }
+    setCityQuery('');
+    setCities([]);
+  };
+
+  const removeCitySelection = (cityToRemove: City) => {
+    setSelectedCities(selectedCities.filter(c => !(c.name === cityToRemove.name && c.postcode === cityToRemove.postcode)));
+  };
+
+  const pollJobStatus = async (jobId: string) => {
+    const maxAttempts = 60; // Poll for max 5 minutes (60 * 5 seconds)
+    let attempts = 0;
+
+    const poll = async () => {
+      try {
+        attempts++;
+        console.log(`Polling job status, attempt ${attempts}/${maxAttempts}`);
+
+        const response = await axios.get(`/api/job-data?job_id=${jobId}`);
+
+        if (response.data.success && response.data.data.status === 'completed') {
+          // Job completed, redirect to success page with job_id
+          setShowJobStatus(false);
+          router.push(`/success?job_id=${jobId}`);
+          return;
+        } else if (response.data.data?.status === 'failed' || response.data.data?.status === 'error') {
+          // Job failed
+          setJobStatus({
+            job_id: jobId,
+            status: 'error',
+            message: 'Failed to generate subpage. Please try again.'
+          });
+          return;
+        }
+
+        // Still pending, continue polling
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 5000); // Poll every 5 seconds
+        } else {
+          // Max attempts reached
+          setJobStatus({
+            job_id: jobId,
+            status: 'error',
+            message: 'Timeout: Subpage generation took too long. Please try again.'
+          });
+        }
+      } catch (error) {
+        console.error('Error polling job status:', error);
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 5000); // Retry on error
+        } else {
+          setJobStatus({
+            job_id: jobId,
+            status: 'error',
+            message: 'Error checking job status. Please try again.'
+          });
+        }
+      }
+    };
+
+    // Start polling after 3 seconds initial delay
+    setTimeout(poll, 3000);
+  };
+
+  const handleCreateSubpage = async () => {
+    const trimmedDomain = domain.trim();
+
+    // Ensure domain has https:// prefix
+    const fullDomain = trimmedDomain.startsWith('http://') || trimmedDomain.startsWith('https://')
+      ? trimmedDomain
+      : `https://${trimmedDomain}`;
+
+    console.log('Debug handleCreateSubpage:', {
+      domain,
+      trimmedDomain,
+      fullDomain,
+      branche,
+      description,
+      selectedCities,
+      showCityInput
+    });
+
+    if (selectedCities.length === 0) {
+      console.error('No cities selected');
+      alert('Please select at least one city first');
+      return;
+    }
+
+    if (!trimmedDomain) {
+      console.error('No domain provided');
+      alert('Domain is missing. Please refresh and try again.');
+      return;
+    }
+
+    const job_id = Date.now().toString();
+
+    const payload = {
+      job_id,
+      domain: fullDomain,
+      branche: branche.trim() || undefined,
+      description: description.trim() || undefined,
+      cities: selectedCities.map(city => ({
+        name: city.name,
+        postcode: city.postcode || '00000',
+        country: city.country || 'Germany'
+      }))
+    };
+
+    console.log('Starting subpage creation...', payload);
+
+    setIsSubmitting(true);
+    try {
+      // First, create the job in our database
+      console.log('Creating job in database...');
+      const createJobResponse = await axios.post('/api/job-data', {
+        action: 'create',
+        job_id: job_id,
+        domain: fullDomain,
+        branche: branche.trim() || undefined,
+        description: description.trim() || undefined,
+        cities: selectedCities.map(city => ({
+          name: city.name,
+          postcode: city.postcode || '00000',
+          country: city.country || 'Germany'
+        }))
+      });
+
+      if (!createJobResponse.data.success) {
+        throw new Error('Failed to create job in database');
+      }
+
+      // Now send to n8n workflow
+      console.log('Making POST request to: https://aionitasde.app.n8n.cloud/webhook-test/generate-job');
+      console.log('Payload being sent:', JSON.stringify(payload, null, 2));
+
+      const response = await axios.post(
+        'https://aionitasde.app.n8n.cloud/webhook-test/generate-job',
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          timeout: 60000 // 60 second timeout for AI processing
+        }
+      );
+
+      console.log('Subpage creation response:', response.data);
+
+      // Job was created, now poll for completion
+      setJobStatus({
+        job_id: job_id,
+        status: 'pending',
+        message: 'Job created successfully. AI is generating your subpages...'
+      });
+      setShowJobStatus(true);
+
+      // Start polling for job completion
+      pollJobStatus(job_id);
+    } catch (error) {
+      console.error('Full error object:', error);
+
+      if (axios.isAxiosError(error)) {
+        console.error('Error response:', error.response);
+        console.error('Error request:', error.request);
+        console.error('Error message:', error.message);
+
+        if (error.response) {
+          // Server responded with error status
+          alert(`❌ Server Error: ${error.response.status} - ${error.response.statusText}\nDetails: ${JSON.stringify(error.response.data)}`);
+        } else if (error.request) {
+          // Request was made but no response received
+          alert('❌ Network Error: Could not reach the server. Please check:\n1. Your internet connection\n2. The API endpoint URL\n3. CORS settings');
+        } else {
+          // Something else happened
+          alert(`❌ Request Error: ${error.message}`);
+        }
+      } else {
+        // Non-Axios error
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        alert(`❌ Unexpected Error: ${errorMessage}`);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!mounted) return null;
+
+  return (
+    <div className="min-h-screen bg-slate-900">
+      <div className="container mx-auto px-6 py-12">
+        <div className="max-w-2xl mx-auto">
+          {/* Sharp Header */}
+          <div className={`text-center mb-16 transition-all duration-700 ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-cyan-500 rounded-none mb-6 transform rotate-45">
+              <div className="transform -rotate-45">
+                <BuildingOfficeIcon className="w-8 h-8 text-white" />
+              </div>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+              Subpage Generator
+            </h1>
+            <p className="text-lg text-slate-300 max-w-lg mx-auto">
+              Create professional subpages for your business with intelligent location targeting
+            </p>
+          </div>
+
+          {/* Domain Input Section */}
+          <div className={`mb-8 transition-all duration-500 delay-150 ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
+            <div className="bg-slate-800 border-2 border-cyan-500 p-8 shadow-2xl hover:shadow-cyan-500/20 transition-all duration-300">
+              <form onSubmit={handleDomainSubmit} className="space-y-6">
+                <div>
+                  <label htmlFor="domain" className="block text-sm font-bold text-cyan-400 mb-2 uppercase tracking-wider">
+                    Business Domain <span className="text-cyan-300">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      id="domain"
+                      required
+                      value={domain}
+                      onChange={(e) => setDomain(e.target.value)}
+                      placeholder="yourcompany.com"
+                      className="w-full px-4 py-4 bg-slate-900 border-2 border-slate-700 focus:border-cyan-500 transition-colors text-white placeholder-slate-400 font-mono"
+                    />
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <MagnifyingGlassIcon className="h-5 w-5 text-cyan-500" />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="branche" className="block text-sm font-bold text-cyan-400 mb-2 uppercase tracking-wider">
+                    Branche
+                  </label>
+                  <input
+                    type="text"
+                    id="branche"
+                    value={branche}
+                    onChange={(e) => setBranche(e.target.value)}
+                    placeholder="e.g., Technology, Healthcare, Finance"
+                    className="w-full px-4 py-4 bg-slate-900 border-2 border-slate-700 focus:border-cyan-500 transition-colors text-white placeholder-slate-400 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="description" className="block text-sm font-bold text-cyan-400 mb-2 uppercase tracking-wider">
+                    Description
+                  </label>
+                  <div className="relative">
+                    <textarea
+                      id="description"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value.slice(0, 255))}
+                      placeholder="Brief description of your business (max 255 characters)"
+                      maxLength={255}
+                      rows={3}
+                      className="w-full px-4 py-4 bg-slate-900 border-2 border-slate-700 focus:border-cyan-500 transition-colors text-white placeholder-slate-400 font-mono resize-none"
+                    />
+                    <div className="absolute bottom-2 right-2 text-xs text-slate-500">
+                      {description.length}/255
+                    </div>
+                  </div>
+                </div>
+
+                {!showCityInput && (
+                  <button
+                    type="submit"
+                    className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold py-4 px-6 transition-colors duration-200 uppercase tracking-wider"
+                  >
+                    Continue to Location
+                  </button>
+                )}
+              </form>
+            </div>
+          </div>
+
+          {/* City Input Section */}
+          {showCityInput && (
+            <div className="mb-8 animate-in slide-in-from-bottom duration-500">
+              <div className="bg-slate-800 border-2 border-cyan-500 p-8 shadow-2xl hover:shadow-cyan-500/20 transition-all duration-300">
+                <div className="space-y-6">
+                  <div>
+                    <label htmlFor="city" className="block text-sm font-bold text-cyan-400 mb-2 uppercase tracking-wider">
+                      Target Location
+                    </label>
+                    <p className="text-slate-400 text-sm mb-4">
+                      Type a city name to automatically find postal codes, or enter a specific postal code
+                    </p>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        id="city"
+                        value={cityQuery}
+                        onChange={handleCityInputChange}
+                        placeholder="e.g., Berlin, Hamburg, or 10115"
+                        className="w-full px-4 py-4 bg-slate-900 border-2 border-slate-700 focus:border-cyan-500 transition-colors text-white placeholder-slate-400 font-mono"
+                      />
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        {loading ? (
+                          <div className="w-5 h-5 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                          <MapPinIcon className="h-5 w-5 text-cyan-500" />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* City Results */}
+                    {cities.length > 0 && (
+                      <div className="mt-4">
+                        <div className="bg-slate-900 border border-slate-700 overflow-hidden">
+                          {cities.map((city, index) => (
+                            <div
+                              key={`${city.name}-${city.postcode}-${index}`}
+                              onClick={() => handleCitySelect(city)}
+                              className="px-4 py-3 hover:bg-slate-800 cursor-pointer border-b border-slate-700 last:border-b-0 transition-colors duration-150 group"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <div className="font-bold text-white group-hover:text-cyan-400 transition-colors">
+                                    {city.name}
+                                  </div>
+                                  {city.postcode && (
+                                    <div className="text-cyan-400 text-sm mt-1 font-mono">
+                                      {city.postcode}
+                                    </div>
+                                  )}
+                                  <div className="text-slate-400 text-xs mt-1 uppercase tracking-wider">
+                                    {city.country}
+                                  </div>
+                                </div>
+                                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                  <div className="w-6 h-6 bg-cyan-500 flex items-center justify-center">
+                                    <span className="text-slate-900 text-xs font-bold">+</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Selected Cities Display */}
+                    {selectedCities.length > 0 && (
+                      <div className="mt-6 animate-in slide-in-from-right duration-300">
+                        <div className="bg-slate-700 border-2 border-cyan-500 p-4">
+                          <div className="flex items-center space-x-2 mb-3">
+                            <MapPinIcon className="w-5 h-5 text-cyan-400" />
+                            <div className="text-sm font-bold text-cyan-400 uppercase tracking-wider">
+                              Selected Locations ({selectedCities.length})
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {selectedCities.map((city) => (
+                              <div key={`${city.name}-${city.postcode}`} className="group bg-slate-900 p-3 border border-slate-600 hover:border-cyan-500 transition-colors">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <div className="font-bold text-white">{city.name}</div>
+                                    {city.postcode && (
+                                      <div className="text-cyan-400 text-sm font-mono">{city.postcode}</div>
+                                    )}
+                                  </div>
+                                  <button
+                                    onClick={() => removeCitySelection(city)}
+                                    className="opacity-0 group-hover:opacity-100 w-5 h-5 bg-red-500 hover:bg-red-400 flex items-center justify-center transition-all duration-200 text-white text-xs font-bold"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Create Subpage Button */}
+          {selectedCities.length > 0 && (
+            <div className="text-center animate-in slide-in-from-bottom duration-500 delay-200">
+              <button
+                onClick={handleCreateSubpage}
+                disabled={isSubmitting}
+                className="bg-cyan-500 hover:bg-cyan-400 disabled:bg-slate-600 text-slate-900 disabled:text-slate-400 font-bold px-12 py-4 transition-colors duration-200 disabled:cursor-not-allowed uppercase tracking-wider text-lg"
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-5 h-5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
+                    <span>Creating...</span>
+                  </div>
+                ) : (
+                  <span>Generate Subpage</span>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Project Summary */}
+          {selectedCities.length > 0 && (
+            <div className="mt-8 animate-in slide-in-from-bottom duration-500 delay-300">
+              <div className="bg-slate-800 border-2 border-cyan-500 p-8 shadow-2xl">
+                <h3 className="text-xl font-bold text-white mb-6 flex items-center uppercase tracking-wider">
+                  <BuildingOfficeIcon className="w-5 h-5 mr-3 text-cyan-400" />
+                  Project Summary
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 bg-slate-900 border border-slate-700">
+                    <div className="text-cyan-400 font-bold text-sm uppercase tracking-wider">Domain</div>
+                    <div className="text-white font-mono mt-1">
+                      {domain.startsWith('http://') || domain.startsWith('https://') ? domain : `https://${domain}`}
+                    </div>
+                  </div>
+                  {branche && (
+                    <div className="p-4 bg-slate-900 border border-slate-700">
+                      <div className="text-cyan-400 font-bold text-sm uppercase tracking-wider">Branche</div>
+                      <div className="text-white font-mono mt-1">{branche}</div>
+                    </div>
+                  )}
+                  {description && (
+                    <div className={`p-4 bg-slate-900 border border-slate-700 ${branche ? 'md:col-span-2' : 'md:col-span-1'}`}>
+                      <div className="text-cyan-400 font-bold text-sm uppercase tracking-wider">Description</div>
+                      <div className="text-white mt-1">{description}</div>
+                    </div>
+                  )}
+                  <div className={`p-4 bg-slate-900 border border-slate-700 ${!branche && !description ? 'md:col-span-1' : 'md:col-span-2'}`}>
+                    <div className="text-cyan-400 font-bold text-sm uppercase tracking-wider">Locations ({selectedCities.length})</div>
+                    <div className="space-y-1 mt-1">
+                      {selectedCities.map((city) => (
+                        <div key={`${city.name}-${city.postcode}`} className="text-white font-bold">
+                          {city.name}{city.postcode ? ` (${city.postcode})` : ''}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-6 flex justify-center">
+                  <div className="inline-flex items-center px-4 py-2 bg-cyan-500 text-slate-900">
+                    <div className="w-2 h-2 bg-slate-900 mr-2"></div>
+                    <span className="font-bold text-sm uppercase tracking-wider">Ready to Deploy</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Job Status Popup */}
+          {showJobStatus && jobStatus && (
+            <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 animate-in fade-in duration-300">
+              <div className="bg-slate-800 border-2 border-cyan-500 p-8 max-w-md w-full mx-4 shadow-2xl animate-in zoom-in-95 duration-300">
+                <div className="text-center">
+                  {/* Status Icon */}
+                  <div className="mb-6">
+                    {jobStatus.status === 'pending' ? (
+                      <div className="inline-flex items-center justify-center w-16 h-16 bg-cyan-500 rounded-full">
+                        <div className="w-8 h-8 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    ) : jobStatus.status === 'success' ? (
+                      <div className="inline-flex items-center justify-center w-16 h-16 bg-green-500 rounded-full">
+                        <div className="w-8 h-8 text-white font-bold text-2xl">✓</div>
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center justify-center w-16 h-16 bg-red-500 rounded-full">
+                        <div className="w-8 h-8 text-white font-bold text-2xl">✗</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Job Status Content */}
+                  <div className="mb-6">
+                    <h3 className="text-xl font-bold text-white mb-2 uppercase tracking-wider">
+                      {jobStatus.status === 'pending' ? 'Processing Job' :
+                       jobStatus.status === 'success' ? 'Job Created' : 'Job Status'}
+                    </h3>
+                    <p className="text-slate-300 mb-4">{jobStatus.message}</p>
+
+                    {/* Job ID */}
+                    <div className="bg-slate-900 border border-slate-700 p-3 mb-4">
+                      <div className="text-cyan-400 font-bold text-sm uppercase tracking-wider mb-1">Job ID</div>
+                      <div className="text-white font-mono text-sm">{jobStatus.job_id}</div>
+                    </div>
+
+                    {/* Status Badge */}
+                    <div className={`inline-flex items-center px-4 py-2 ${
+                      jobStatus.status === 'pending' ? 'bg-cyan-500 text-slate-900' :
+                      jobStatus.status === 'success' ? 'bg-green-500 text-white' :
+                      'bg-red-500 text-white'
+                    }`}>
+                      <div className={`w-2 h-2 ${
+                        jobStatus.status === 'pending' ? 'bg-slate-900' :
+                        'bg-white'
+                      } mr-2 ${jobStatus.status === 'pending' ? 'animate-pulse' : ''}`}></div>
+                      <span className="font-bold text-sm uppercase tracking-wider">
+                        {jobStatus.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Close Button */}
+                  {jobStatus.status !== 'pending' && (
+                    <button
+                      onClick={() => setShowJobStatus(false)}
+                      className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 transition-colors duration-200 uppercase tracking-wider"
+                    >
+                      Close
+                    </button>
+                  )}
+
+                  {/* Auto-close message for pending status */}
+                  {jobStatus.status === 'pending' && (
+                    <div className="text-slate-400 text-sm mt-4">
+                      This window will update automatically when processing completes
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
     </div>
   );
 }
