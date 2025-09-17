@@ -20,7 +20,10 @@
       "Bash(dir:*)",
       "Bash(rm:*)",
       "Bash(npm install:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(node:*)",
+      "Bash(npm:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

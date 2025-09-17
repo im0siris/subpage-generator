@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Simple in-memory storage for job results
-const jobResults = new Map();
-
 export async function POST(request: NextRequest) {
   try {
     console.log('Callback endpoint called');
@@ -19,16 +16,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Store the result
-    jobResults.set(body.job_id, {
+    // Log the received data (in production, this would be stored in a database)
+    console.log(`Received result for job ${body.job_id}:`, {
       status: body.status || 'completed',
       content: body.content,
       timestamp: new Date().toISOString(),
       city: body.city,
       domain: body.domain
     });
-
-    console.log(`Stored result for job ${body.job_id}`);
 
     return NextResponse.json({
       success: true,
@@ -44,8 +39,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Export the jobResults for the status endpoint
-export { jobResults };
 
 // Handle CORS for the callback
 export async function OPTIONS() {

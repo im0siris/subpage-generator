@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Simple in-memory storage for job results (shared between routes)
-const jobResults = new Map();
-
 export async function GET(request: NextRequest) {
   console.log('Job status endpoint called');
 
@@ -18,29 +15,17 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Get the stored results
-  const result = jobResults.get(jobId);
+  // For now, return pending status since we don't have persistent storage
+  const result = null;
 
-  if (!result) {
-    console.log(`Job ${jobId} not found, returning pending`);
-    return NextResponse.json({
-      status: 'pending',
-      message: 'Job is still processing...'
-    });
-  }
-
-  console.log(`Job ${jobId} found with status: ${result.status}`);
+  // Since we don't have persistent storage, always return pending
+  console.log(`Job ${jobId} status check - returning pending`);
   return NextResponse.json({
-    status: result.status,
-    content: result.content,
-    city: result.city,
-    domain: result.domain,
-    timestamp: result.timestamp
+    status: 'pending',
+    message: 'Job is still processing...'
   });
 }
 
-// Export the jobResults so other modules can import it
-export { jobResults };
 
 // Handle CORS
 export async function OPTIONS() {
