@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { MagnifyingGlassIcon, BuildingOfficeIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import Footer from '@/components/Footer';
 
 interface City {
   name: string;
@@ -279,7 +280,7 @@ export default function Home() {
   try {
     // 🔑 Send directly to your Workflow A Webhook (Production URL, not /api/job-data!)
     const response = await axios.post(
-      'https://aionitasde.app.n8n.cloud/webhook-test/generate-job', // Fixed URL to match n8n workflow
+      'https://aionitasde.app.n8n.cloud/webhook/generate-job', // Fixed URL to match n8n workflow
       payload,
       {
         headers: { 'Content-Type': 'application/json' },
@@ -312,31 +313,40 @@ export default function Home() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-slate-900">
-      <div className="container mx-auto px-6 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
+      {/* Ambient Background Glow */}
+      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-transparent to-purple-500/5"></div>
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+
+      <div className="container mx-auto px-6 py-12 relative z-10">
         <div className="max-w-2xl mx-auto">
-          {/* Sharp Header */}
+          {/* Enhanced Header with Neon Effects */}
           <div className={`text-center mb-16 transition-all duration-700 ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-cyan-500 rounded-none mb-6 transform rotate-45">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-cyan-400 to-cyan-600 rounded-none mb-6 transform rotate-45 shadow-lg shadow-cyan-500/50 hover:shadow-cyan-500/70 transition-all duration-300">
               <div className="transform -rotate-45">
-                <BuildingOfficeIcon className="w-8 h-8 text-white" />
+                <BuildingOfficeIcon className="w-10 h-10 text-white drop-shadow-lg" />
               </div>
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+            <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 bg-gradient-to-r from-white to-cyan-200 bg-clip-text text-transparent drop-shadow-2xl">
               Subpage Generator
             </h1>
-            <p className="text-lg text-slate-300 max-w-lg mx-auto">
+            <div className="w-24 h-1 bg-gradient-to-r from-cyan-400 to-purple-500 mx-auto mb-6 shadow-lg shadow-cyan-500/50"></div>
+            <p className="text-xl text-slate-300 max-w-lg mx-auto leading-relaxed">
               Create professional subpages for your business with intelligent location targeting
             </p>
           </div>
 
-          {/* Domain Input Section */}
+          {/* Enhanced Domain Input Section */}
           <div className={`mb-8 transition-all duration-500 delay-150 ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
-            <div className="bg-slate-800 border-2 border-cyan-500 p-8 shadow-2xl hover:shadow-cyan-500/20 transition-all duration-300">
+            <div className="bg-slate-800/90 backdrop-blur-sm border-2 border-cyan-500 p-8 shadow-2xl shadow-cyan-500/20 hover:shadow-cyan-500/30 hover:border-cyan-400 transition-all duration-300 relative overflow-hidden">
+              {/* Subtle inner glow */}
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-purple-500/5 pointer-events-none"></div>
+              <div className="relative z-10">
               <form onSubmit={handleDomainSubmit} className="space-y-6">
                 <div>
                   <label htmlFor="domain" className="block text-sm font-bold text-cyan-400 mb-2 uppercase tracking-wider">
-                    Business Domain <span className="text-cyan-300">*</span>
+                    Domain <span className="text-cyan-300">*</span>
                   </label>
                   <div className="relative">
                     <input
@@ -346,7 +356,7 @@ export default function Home() {
                       value={domain}
                       onChange={(e) => setDomain(e.target.value)}
                       placeholder="yourcompany.com"
-                      className="w-full px-4 py-4 bg-slate-900 border-2 border-slate-700 focus:border-cyan-500 transition-colors text-white placeholder-slate-400 font-mono"
+                      className="w-full px-4 py-4 bg-slate-900/80 backdrop-blur-sm border-2 border-slate-700 focus:border-cyan-500 focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-300 text-white placeholder-slate-400 font-mono hover:border-slate-600"
                     />
                     <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                       <MagnifyingGlassIcon className="h-5 w-5 text-cyan-500" />
@@ -364,7 +374,7 @@ export default function Home() {
                     value={branche}
                     onChange={(e) => setBranche(e.target.value)}
                     placeholder="e.g., Technology, Healthcare, Finance"
-                    className="w-full px-4 py-4 bg-slate-900 border-2 border-slate-700 focus:border-cyan-500 transition-colors text-white placeholder-slate-400 font-mono"
+                    className="w-full px-4 py-4 bg-slate-900/80 backdrop-blur-sm border-2 border-slate-700 focus:border-cyan-500 focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-300 text-white placeholder-slate-400 font-mono hover:border-slate-600"
                   />
                 </div>
 
@@ -380,7 +390,7 @@ export default function Home() {
                       placeholder="Brief description of your business (max 255 characters)"
                       maxLength={255}
                       rows={3}
-                      className="w-full px-4 py-4 bg-slate-900 border-2 border-slate-700 focus:border-cyan-500 transition-colors text-white placeholder-slate-400 font-mono resize-none"
+                      className="w-full px-4 py-4 bg-slate-900/80 backdrop-blur-sm border-2 border-slate-700 focus:border-cyan-500 focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-300 text-white placeholder-slate-400 font-mono resize-none hover:border-slate-600"
                     />
                     <div className="absolute bottom-2 right-2 text-xs text-slate-500">
                       {description.length}/255
@@ -391,19 +401,23 @@ export default function Home() {
                 {!showCityInput && (
                   <button
                     type="submit"
-                    className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-bold py-4 px-6 transition-colors duration-200 uppercase tracking-wider"
+                    className="w-full bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-900 font-bold py-4 px-6 transition-all duration-300 uppercase tracking-wider shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-105 transform"
                   >
                     Continue to Location
                   </button>
                 )}
               </form>
+              </div>
             </div>
           </div>
 
-          {/* City Input Section */}
+          {/* Enhanced City Input Section */}
           {showCityInput && (
             <div className="mb-8 animate-in slide-in-from-bottom duration-500">
-              <div className="bg-slate-800 border-2 border-cyan-500 p-8 shadow-2xl hover:shadow-cyan-500/20 transition-all duration-300">
+              <div className="bg-slate-800/90 backdrop-blur-sm border-2 border-cyan-500 p-8 shadow-2xl shadow-cyan-500/20 hover:shadow-cyan-500/30 hover:border-cyan-400 transition-all duration-300 relative overflow-hidden">
+                {/* Subtle inner glow */}
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-purple-500/5 pointer-events-none"></div>
+                <div className="relative z-10">
                 <div className="space-y-6">
                   <div>
                     <label htmlFor="city" className="block text-sm font-bold text-cyan-400 mb-2 uppercase tracking-wider">
@@ -419,7 +433,7 @@ export default function Home() {
                         value={cityQuery}
                         onChange={handleCityInputChange}
                         placeholder="e.g., Berlin, Hamburg, or 10115"
-                        className="w-full px-4 py-4 bg-slate-900 border-2 border-slate-700 focus:border-cyan-500 transition-colors text-white placeholder-slate-400 font-mono"
+                        className="w-full px-4 py-4 bg-slate-900/80 backdrop-blur-sm border-2 border-slate-700 focus:border-cyan-500 focus:shadow-lg focus:shadow-cyan-500/20 transition-all duration-300 text-white placeholder-slate-400 font-mono hover:border-slate-600"
                       />
                       <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                         {loading ? (
@@ -430,15 +444,15 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* City Results */}
+                    {/* Enhanced City Results */}
                     {cities.length > 0 && (
                       <div className="mt-4">
-                        <div className="bg-slate-900 border border-slate-700 overflow-hidden">
+                        <div className="bg-slate-900/90 backdrop-blur-sm border border-slate-700 shadow-lg shadow-cyan-500/10 overflow-hidden">
                           {cities.map((city, index) => (
                             <div
                               key={`${city.name}-${city.postcode}-${index}`}
                               onClick={() => handleCitySelect(city)}
-                              className="px-4 py-3 hover:bg-slate-800 cursor-pointer border-b border-slate-700 last:border-b-0 transition-colors duration-150 group"
+                              className="px-4 py-3 hover:bg-slate-800/80 cursor-pointer border-b border-slate-700 last:border-b-0 transition-all duration-300 group hover:shadow-inner hover:shadow-cyan-500/10"
                             >
                               <div className="flex items-center justify-between">
                                 <div className="flex-1">
@@ -501,6 +515,7 @@ export default function Home() {
                     )}
                   </div>
                 </div>
+                </div>
               </div>
             </div>
           )}
@@ -511,7 +526,7 @@ export default function Home() {
               <button
                 onClick={handleCreateSubpage}
                 disabled={isSubmitting}
-                className="bg-cyan-500 hover:bg-cyan-400 disabled:bg-slate-600 text-slate-900 disabled:text-slate-400 font-bold px-12 py-4 transition-colors duration-200 disabled:cursor-not-allowed uppercase tracking-wider text-lg"
+                className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 disabled:from-slate-600 disabled:to-slate-700 text-slate-900 disabled:text-slate-400 font-bold px-12 py-4 transition-all duration-300 disabled:cursor-not-allowed uppercase tracking-wider text-lg shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-105 transform disabled:transform-none disabled:shadow-none"
               >
                 {isSubmitting ? (
                   <div className="flex items-center justify-center space-x-2">
@@ -525,10 +540,13 @@ export default function Home() {
             </div>
           )}
 
-          {/* Project Summary */}
+          {/* Enhanced Project Summary */}
           {selectedCities.length > 0 && (
             <div className="mt-8 animate-in slide-in-from-bottom duration-500 delay-300">
-              <div className="bg-slate-800 border-2 border-cyan-500 p-8 shadow-2xl">
+              <div className="bg-slate-800/90 backdrop-blur-sm border-2 border-cyan-500 p-8 shadow-2xl shadow-cyan-500/20 hover:shadow-cyan-500/30 relative overflow-hidden">
+                {/* Subtle inner glow */}
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-purple-500/5 pointer-events-none"></div>
+                <div className="relative z-10">
                 <h3 className="text-xl font-bold text-white mb-6 flex items-center uppercase tracking-wider">
                   <BuildingOfficeIcon className="w-5 h-5 mr-3 text-cyan-400" />
                   Project Summary
@@ -564,32 +582,36 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="mt-6 flex justify-center">
-                  <div className="inline-flex items-center px-4 py-2 bg-cyan-500 text-slate-900">
-                    <div className="w-2 h-2 bg-slate-900 mr-2"></div>
+                  <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-slate-900 shadow-lg shadow-cyan-500/30">
+                    <div className="w-2 h-2 bg-slate-900 mr-2 animate-pulse"></div>
                     <span className="font-bold text-sm uppercase tracking-wider">Ready to Deploy</span>
                   </div>
+                </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Job Status Popup */}
+          {/* Enhanced Job Status Popup */}
           {showJobStatus && jobStatus && (
-            <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 animate-in fade-in duration-300">
-              <div className="bg-slate-800 border-2 border-cyan-500 p-8 max-w-md w-full mx-4 shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-300">
+              <div className="bg-slate-800/95 backdrop-blur-sm border-2 border-cyan-500 p-8 max-w-md w-full mx-4 shadow-2xl shadow-cyan-500/30 animate-in zoom-in-95 duration-300 relative overflow-hidden">
+                {/* Subtle inner glow */}
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-purple-500/10 pointer-events-none"></div>
+                <div className="relative z-10">
                 <div className="text-center">
                   {/* Status Icon */}
                   <div className="mb-6">
                     {jobStatus.status === 'pending' ? (
-                      <div className="inline-flex items-center justify-center w-16 h-16 bg-cyan-500 rounded-full">
+                      <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-full shadow-lg shadow-cyan-500/50">
                         <div className="w-8 h-8 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
                       </div>
                     ) : jobStatus.status === 'success' ? (
-                      <div className="inline-flex items-center justify-center w-16 h-16 bg-green-500 rounded-full">
+                      <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-green-500 to-green-600 rounded-full shadow-lg shadow-green-500/50">
                         <div className="w-8 h-8 text-white font-bold text-2xl">✓</div>
                       </div>
                     ) : (
-                      <div className="inline-flex items-center justify-center w-16 h-16 bg-red-500 rounded-full">
+                      <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-red-500 to-red-600 rounded-full shadow-lg shadow-red-500/50">
                         <div className="w-8 h-8 text-white font-bold text-2xl">✗</div>
                       </div>
                     )}
@@ -604,7 +626,7 @@ export default function Home() {
                     <p className="text-slate-300 mb-4">{jobStatus.message}</p>
 
                     {/* Job ID */}
-                    <div className="bg-slate-900 border border-slate-700 p-3 mb-4">
+                    <div className="bg-slate-900/80 backdrop-blur-sm border border-slate-700 p-3 mb-4 shadow-inner shadow-cyan-500/10">
                       <div className="text-cyan-400 font-bold text-sm uppercase tracking-wider mb-1">Job ID</div>
                       <div className="text-white font-mono text-sm">{jobStatus.job_id}</div>
                     </div>
@@ -629,7 +651,7 @@ export default function Home() {
                   {jobStatus.status !== 'pending' && (
                     <button
                       onClick={() => setShowJobStatus(false)}
-                      className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 transition-colors duration-200 uppercase tracking-wider"
+                      className="bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 text-white font-bold py-3 px-6 transition-all duration-300 uppercase tracking-wider shadow-lg hover:shadow-slate-500/20 hover:scale-105 transform"
                     >
                       Close
                     </button>
@@ -642,11 +664,14 @@ export default function Home() {
                     </div>
                   )}
                 </div>
+                </div>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      <Footer />
     </div>
   );
 }
