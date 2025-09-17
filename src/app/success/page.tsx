@@ -17,22 +17,38 @@ export default function Success() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Get data from URL parameters
-    const city = searchParams.get('city');
-    const content = searchParams.get('content');
-    const domain = searchParams.get('domain');
+    const fetchJobData = async () => {
+      const jobId = searchParams.get('job_id');
 
-    if (city && content && domain) {
-      setSubpageData({
-        city: decodeURIComponent(city),
-        content: decodeURIComponent(content),
-        domain: decodeURIComponent(domain)
-      });
-    } else {
-      // If no data in URL, redirect back to home
-      router.push('/');
-    }
-    setIsLoading(false);
+      if (!jobId) {
+        // If no job_id, redirect back to home
+        router.push('/');
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/job-data?job_id=${jobId}`);
+        const data = await response.json();
+
+        if (data.success && data.data.content) {
+          setSubpageData({
+            city: data.data.city || 'Generated Location',
+            content: data.data.content,
+            domain: data.data.domain
+          });
+        } else {
+          // If no data or failed to fetch, redirect back to home
+          router.push('/');
+        }
+      } catch (error) {
+        console.error('Error fetching job data:', error);
+        router.push('/');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchJobData();
   }, [searchParams, router]);
 
   const downloadTsxFile = () => {
@@ -61,6 +77,22 @@ export default function Success() {
       cleanContent = cleanContent.replace(/```html\n?/g, '').replace(/\n?```/g, '');
     }
 
+    // Extract body content only (remove DOCTYPE, html, head tags)
+    const bodyMatch = cleanContent.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    if (bodyMatch) {
+      cleanContent = bodyMatch[1];
+    } else {
+      // If no body tag found, remove DOCTYPE and html wrapper
+      cleanContent = cleanContent
+        .replace(/<!DOCTYPE[^>]*>/i, '')
+        .replace(/<html[^>]*>/i, '')
+        .replace(/<\/html>/i, '')
+        .replace(/<head>[\s\S]*?<\/head>/i, '')
+        .replace(/<body[^>]*>/i, '')
+        .replace(/<\/body>/i, '')
+        .trim();
+    }
+
     // Clean up the content
     const tsxContent = cleanContent
       // Replace [object Object] with actual city name
@@ -81,6 +113,16 @@ export default function Success() {
 
     // Create safe component name
     const componentName = city.replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '') + 'Subpage';
+
+    // Extract metadata from head if present
+    let title = `IT-Dienstleistungen in ${city} | ${domain.replace('https://', '').replace('http://', '')}`;
+    let description = `Entdecken Sie die innovativen IT-Lösungen in ${city}. Steigern Sie die Effizienz Ihres Unternehmens durch maßgeschneiderte Softwareentwicklungen und IT-Beratung.`;
+
+    const titleMatch = htmlContent.match(/<title[^>]*>(.*?)<\/title>/i);
+    const descMatch = htmlContent.match(/<meta[^>]*name=['""]description['""][^>]*content=['""]([^'"]*)['""][^>]*>/i);
+
+    if (titleMatch) title = titleMatch[1].replace(/"/g, '\\"');
+    if (descMatch) description = descMatch[1].replace(/"/g, '\\"');
 
     // Create a complete TSX component
     return `import React from 'react';
@@ -103,8 +145,8 @@ export default function ${componentName}({
 
 // Export metadata for Next.js
 export const metadata = {
-  title: \`IT-Dienstleistungen in \${city} | \${domain.replace('https://', '').replace('http://', '')}\`,
-  description: \`Entdecken Sie die innovativen IT-Lösungen in \${city}. Steigern Sie die Effizienz Ihres Unternehmens durch maßgeschneiderte Softwareentwicklungen und IT-Beratung.\`
+  title: "${title}",
+  description: "${description}"
 };`;
   };
 
@@ -178,13 +220,32 @@ export const metadata = {
               <div className="text-cyan-400 font-bold text-sm uppercase tracking-wider mb-4">
                 Generated HTML Content
               </div>
-              <div className="bg-white p-6 rounded border max-h-96 overflow-y-auto">
+              <div className="bg-slate-800 border border-slate-600 p-6 rounded max-h-96 overflow-y-auto">
                 <div
+                  className="text-cyan-400"
                   dangerouslySetInnerHTML={{
-                    __html: subpageData.content
-                      .replace(/```html\n?/g, '')
-                      .replace(/\n?```/g, '')
-                      .replace(/\[object Object\]/g, subpageData.city)
+                    __html: (() => {
+                      const cleanContent = subpageData.content
+                        .replace(/```html\n?/g, '')
+                        .replace(/\n?```/g, '')
+                        .replace(/\[object Object\]/g, subpageData.city);
+
+                      // Extract body content for preview
+                      const bodyMatch = cleanContent.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+                      if (bodyMatch) {
+                        return bodyMatch[1];
+                      }
+
+                      // Fallback: remove HTML structure tags
+                      return cleanContent
+                        .replace(/<!DOCTYPE[^>]*>/i, '')
+                        .replace(/<html[^>]*>/i, '')
+                        .replace(/<\/html>/i, '')
+                        .replace(/<head>[\s\S]*?<\/head>/i, '')
+                        .replace(/<body[^>]*>/i, '')
+                        .replace(/<\/body>/i, '')
+                        .trim();
+                    })()
                   }}
                 />
               </div>

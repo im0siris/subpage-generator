@@ -188,10 +188,19 @@ export default function Home() {
 
         const response = await axios.get(`/api/job-data?job_id=${jobId}`);
 
-        if (response.data.success && response.data.data.status === 'completed') {
-          // Job completed, redirect to success page with job_id
-          setShowJobStatus(false);
-          router.push(`/success?job_id=${jobId}`);
+        if (response.data.success && (response.data.data.status === 'completed' || response.data.data.status === 'completeted')) {
+          // Job completed, show success message for 7 seconds then redirect
+          setJobStatus({
+            job_id: jobId,
+            status: 'success',
+            message: 'Subpages generated successfully! Redirecting to download page...'
+          });
+
+          // Redirect after 7 seconds
+          setTimeout(() => {
+            setShowJobStatus(false);
+            router.push(`/success?job_id=${jobId}`);
+          }, 7000);
           return;
         } else if (response.data.data?.status === 'failed' || response.data.data?.status === 'error') {
           // Job failed
