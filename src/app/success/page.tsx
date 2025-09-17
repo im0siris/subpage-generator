@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { CheckCircleIcon, ArrowDownTrayIcon, HomeIcon } from '@heroicons/react/24/outline';
 
+export const dynamic = "force-dynamic";
 interface SubpageData {
   city: string;
   content: string;
