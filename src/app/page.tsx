@@ -233,126 +233,72 @@ export default function Home() {
   };
 
   const handleCreateSubpage = async () => {
-    const trimmedDomain = domain.trim();
+  const trimmedDomain = domain.trim();
 
-    // Ensure domain has https:// prefix
-    const fullDomain = trimmedDomain.startsWith('http://') || trimmedDomain.startsWith('https://')
-      ? trimmedDomain
-      : `https://${trimmedDomain}`;
+  // Ensure domain has https:// prefix
+  const fullDomain = trimmedDomain.startsWith('http://') || trimmedDomain.startsWith('https://')
+    ? trimmedDomain
+    : `https://${trimmedDomain}`;
 
-    console.log('Debug handleCreateSubpage:', {
-      domain,
-      trimmedDomain,
-      fullDomain,
-      branche,
-      description,
-      selectedCities,
-      showCityInput
-    });
+  if (selectedCities.length === 0) {
+    alert('Please select at least one city first');
+    return;
+  }
 
-    if (selectedCities.length === 0) {
-      console.error('No cities selected');
-      alert('Please select at least one city first');
-      return;
-    }
+  if (!trimmedDomain) {
+    alert('Domain is missing. Please refresh and try again.');
+    return;
+  }
 
-    if (!trimmedDomain) {
-      console.error('No domain provided');
-      alert('Domain is missing. Please refresh and try again.');
-      return;
-    }
+  const job_id = Date.now().toString();
 
-    const job_id = Date.now().toString();
-
-    const payload = {
-      job_id,
-      domain: fullDomain,
-      branche: branche.trim() || undefined,
-      description: description.trim() || undefined,
-      cities: selectedCities.map(city => ({
-        name: city.name,
-        postcode: city.postcode || '00000',
-        country: city.country || 'Germany'
-      }))
-    };
-
-    console.log('Starting subpage creation...', payload);
-
-    setIsSubmitting(true);
-    try {
-      // First, create the job in our database
-      console.log('Creating job in database...');
-      const createJobResponse = await axios.post('/api/job-data', {
-        action: 'create',
-        job_id: job_id,
-        domain: fullDomain,
-        branche: branche.trim() || undefined,
-        description: description.trim() || undefined,
-        cities: selectedCities.map(city => ({
-          name: city.name,
-          postcode: city.postcode || '00000',
-          country: city.country || 'Germany'
-        }))
-      });
-
-      if (!createJobResponse.data.success) {
-        throw new Error('Failed to create job in database');
-      }
-
-      // Now send to n8n workflow
-      console.log('Making POST request to: https://aionitasde.app.n8n.cloud/webhook-test/generate-job');
-      console.log('Payload being sent:', JSON.stringify(payload, null, 2));
-
-      const response = await axios.post(
-        'https://aionitasde.app.n8n.cloud/webhook-test/generate-job',
-        payload,
-        {
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          timeout: 60000 // 60 second timeout for AI processing
-        }
-      );
-
-      console.log('Subpage creation response:', response.data);
-
-      // Job was created, now poll for completion
-      setJobStatus({
-        job_id: job_id,
-        status: 'pending',
-        message: 'Job created successfully. AI is generating your subpages...'
-      });
-      setShowJobStatus(true);
-
-      // Start polling for job completion
-      pollJobStatus(job_id);
-    } catch (error) {
-      console.error('Full error object:', error);
-
-      if (axios.isAxiosError(error)) {
-        console.error('Error response:', error.response);
-        console.error('Error request:', error.request);
-        console.error('Error message:', error.message);
-
-        if (error.response) {
-          // Server responded with error status
-          alert(`❌ Server Error: ${error.response.status} - ${error.response.statusText}\nDetails: ${JSON.stringify(error.response.data)}`);
-        } else if (error.request) {
-          // Request was made but no response received
-          alert('❌ Network Error: Could not reach the server. Please check:\n1. Your internet connection\n2. The API endpoint URL\n3. CORS settings');
-        } else {
-          // Something else happened
-          alert(`❌ Request Error: ${error.message}`);
-        }
-      } else {
-        // Non-Axios error
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        alert(`❌ Unexpected Error: ${errorMessage}`);
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
+  const payload = {
+    job_id,
+    domain: fullDomain,
+    branche: branche.trim() || undefined,
+    description: description.trim() || undefined,
+    cities: selectedCities.map(city => ({
+      name: city.name,
+      postcode: city.postcode || '00000',
+      country: city.country || 'Germany'
+    }))
   };
+
+  console.log('Starting subpage creation, payload:', payload);
+
+  setIsSubmitting(true);
+  try {
+    // 🔑 Send directly to your Workflow A Webhook (Production URL, not /api/job-data!)
+    const response = await axios.post(
+      'https://aionitasde.app.n8n.cloud/webhook-test/generate-job', // Fixed URL to match n8n workflow
+      payload,
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 60000
+      }
+    );
+
+    console.log('Webhook response:', response.data);
+
+    // Show pending status popup
+    setJobStatus({
+      job_id,
+      status: 'pending',
+      message: 'Job created successfully. AI is generating your subpages...'
+    });
+    setShowJobStatus(true);
+
+    // Start polling job-data API for completion
+    pollJobStatus(job_id);
+
+  } catch (error) {
+    console.error('Error sending to n8n webhook:', error);
+    alert('❌ Failed to start job. Please check the Webhook URL and try again.');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
   if (!mounted) return null;
 
