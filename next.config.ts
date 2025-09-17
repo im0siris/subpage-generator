@@ -11,7 +11,6 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  swcMinify: false,
   compiler: {
     removeConsole: false,
   },
