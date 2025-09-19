@@ -43,8 +43,10 @@ export async function GET(request: NextRequest) {
         domain: data.domain,
         status: data.status,
         content: data.generated_html,
-        // 👇 city is extracted from your JSON "cities" column
-        city: data.cities?.name ?? null,
+        // Handle both single city (legacy) and multiple cities
+        cities: Array.isArray(data.cities) ? data.cities : (data.cities?.name ? [data.cities] : []),
+        // Keep backward compatibility
+        city: Array.isArray(data.cities) ? data.cities[0]?.name : data.cities?.name ?? null,
       },
     });
   } catch (err) {
